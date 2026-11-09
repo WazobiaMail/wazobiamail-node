@@ -5,6 +5,9 @@ Official TypeScript and Node.js SDK for the [WazobiaMail](https://wazobiamail.co
 [![npm version](https://img.shields.io/npm/v/wazobiamail.svg)](https://www.npmjs.com/package/wazobiamail)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6.svg)](https://www.typescriptlang.org/)
+[![Documentation](https://img.shields.io/badge/Docs-docs.wazobiamail.com-blueviolet.svg)](https://docs.wazobiamail.com)
+
+> 📚 **Official Platform Documentation**: Visit [docs.wazobiamail.com](https://docs.wazobiamail.com) for exhaustive API references, architecture guides, DNS setup walkthroughs, and webhook configurations.
 
 ---
 
@@ -151,6 +154,64 @@ console.log('Deliverability Score (0-100):', report.data.deliverabilityScore);
 console.log('Spam Score:', report.data.score); // e.g. 4.2
 console.log('Findings:', report.data.findings);
 console.log('Recommendations:', report.data.recommendations);
+```
+
+---
+
+## Delivery Tracking, Stats, Read Receipts & Click Receipts
+
+WazobiaMail provides built-in, granular observability for every transactional email dispatched.
+
+### 1. Read Receipts (Open Tracking)
+Every HTML email sent through WazobiaMail can automatically include an invisible, privacy-compliant 1x1 tracking pixel. When the recipient opens the email in their client (Apple Mail, Gmail, Outlook, etc.):
+- An `email.opened` event is recorded.
+- Captures the exact timestamp, recipient IP geolocation, device type, and client user-agent.
+- Tracks unique opens vs. total open counts to accurately measure audience engagement.
+- Queryable via `client.messages.getTracked(trackingId)` or streamed via real-time Webhooks.
+
+### 2. Click Receipts (Link Tracking)
+Links in your email content can be rewritten using your verified tracking domain (`email.mail.yourdomain.com` or `trk.wazobiamail.com`):
+- When a recipient clicks any link, a `link.clicked` receipt is created with microsecond precision.
+- Records the original destination URL, recipient email, click timestamp, and click count.
+- Enables fraud detection, user engagement scoring, and automated lifecycle triggers.
+
+### 3. Delivery Lifecycle & Timeline
+Every message transitions through well-defined lifecycle states:
+`queued` ➔ `sent` ➔ `delivered` ➔ `opened` ➔ `clicked` ➔ `bounced` / `complained`
+
+```typescript
+// Query tracking details and full receipt timeline
+const tracking = await client.messages.getTracked('trk_abc123456');
+
+console.log('Status:', tracking.data.status); // 'delivered', 'opened', 'bounced'
+console.log('Delivered At:', tracking.data.deliveredAt);
+console.log('Opens Count (Read Receipts):', tracking.data.openCount);
+console.log('Clicks Count (Click Receipts):', tracking.data.clickCount);
+
+// Inspect granular event stream
+for (const event of tracking.data.events) {
+  console.log(`[${event.occurredAt}] ${event.eventType} - Recipient: ${event.recipient}`);
+  if (event.linkUrl) {
+    console.log(`Clicked URL: ${event.linkUrl}`);
+  }
+}
+```
+
+### 4. Aggregated Delivery Stats & Metrics
+Query delivery rates, open rates, click-through rates (CTR), and bounce classifications across your account or filtered by sending domain and date ranges:
+
+```typescript
+const stats = await client.messages.listTracked({
+  status: 'delivered',
+  fromDate: '2026-11-01',
+  toDate: '2026-11-09',
+  limit: 100,
+});
+
+console.log('Total tracked messages:', stats.data.total);
+for (const msg of stats.data.messages) {
+  console.log(`${msg.trackingId}: ${msg.subject} -> ${msg.status} (${msg.openCount} opens, ${msg.clickCount} clicks)`);
+}
 ```
 
 ---
