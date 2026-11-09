@@ -1,0 +1,61 @@
+{
+  "name": "wazobiamail",
+  "version": "0.1.0",
+  "description": "Official WazobiaMail SDK for TypeScript and JavaScript - Transactional Email API, Hosted Mailboxes, and Deliverability",
+  "author": "Bowofade Oyerinde <bowofade@bonifade.com> (https://github.com/oyenet1)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/WazobiaMail/wazobiamail-node.git"
+  },
+  "homepage": "https://wazobiamail.com",
+  "bugs": {
+    "url": "https://github.com/WazobiaMail/wazobiamail-node/issues"
+  },
+  "keywords": [
+    "wazobiamail",
+    "email",
+    "transactional-email",
+    "sdk",
+    "smtp",
+    "mailboxes",
+    "deliverability",
+    "spam-check",
+    "typescript"
+  ],
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": {
+        "import": "./dist/index.d.ts",
+        "require": "./dist/index.d.cts"
+      },
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "prepack": "bun run build"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "tsup": "^8.3.6",
+    "typescript": "^5.7.3"
+  }
+}
