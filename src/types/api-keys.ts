@@ -35,5 +35,5 @@ export interface CreatedApiKeyData extends ApiKeyRecord {
   apiKey: string;
 }
 
-export type ApiKeyListResponse = WazobiaApiResponse<ApiKeyRecord[]>;
-export type CreateApiKeyResponse = WazobiaApiResponse<CreatedApiKeyData>;
+export type ApiKeyListResponse = WazobiaApiResponse<{ items: ApiKeyRecord[] }>;
+export type CreateApiKeyResponse = WazobiaApiResponse<{ apiKey: CreatedApiKeyData }>;

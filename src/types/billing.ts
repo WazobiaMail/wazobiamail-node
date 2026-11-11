@@ -11,11 +11,11 @@ import { WazobiaApiResponse, Pagination } from './common.js';
 
 export interface InvoiceRecord {
   id: string;
-  invoiceNumber: string;
   amount: number;
   currency: string;
   status: 'paid' | 'pending' | 'failed' | string;
-  product: string;
+  purpose: string;
+  metadata?: Record<string, unknown>;
   dueDate?: string;
   paidAt?: string;
   createdAt: string;
@@ -27,9 +27,12 @@ export type InvoiceListResponse = WazobiaApiResponse<{
 }>;
 
 export interface UnitsSummary {
-  balance: number;
-  lifetimePurchased: number;
-  lifetimeUsed: number;
+  includedAllowance: number;
+  includedUsed: number;
+  includedRemaining: number;
+  purchasedBalance: number;
+  unlimited: boolean;
+  canBuyCredits: boolean;
 }
 
 export type UnitsSummaryResponse = WazobiaApiResponse<UnitsSummary>;
@@ -58,12 +61,15 @@ export type UnitLedgerResponse = WazobiaApiResponse<{
 export interface UnitPack {
   id: string;
   name: string;
+  description?: string;
   units: number;
-  priceNgn: number;
-  priceUsd: number;
+  priceNgnMinor: number;
+  priceUsdMinor: number;
+  isActive: boolean;
+  sortOrder: number;
 }
 
-export type UnitPacksResponse = WazobiaApiResponse<UnitPack[]>;
+export type UnitPacksResponse = WazobiaApiResponse<{ items: UnitPack[] }>;
 
 export interface PurchaseUnitsRequest {
   packId: string;
@@ -71,23 +77,36 @@ export interface PurchaseUnitsRequest {
 }
 
 export interface PurchaseUnitsData {
-  invoiceId: string;
+  invoice?: InvoiceRecord;
+  invoiceId?: string;
   paymentUrl?: string;
 }
 
 export type PurchaseUnitsResponse = WazobiaApiResponse<PurchaseUnitsData>;
 
-export interface SubscriptionRecord {
+export interface SubscriptionPlanSummary {
   id: string;
-  planId: string;
-  status: string;
-  currentPeriodStart: string;
-  currentPeriodEnd: string;
-  cancelAtPeriodEnd: boolean;
-  currency: string;
+  name: string;
+  usdPrice?: number;
+  nairaPrice?: number;
+  monthlyQuota?: number;
 }
 
-export type SubscriptionResponse = WazobiaApiResponse<SubscriptionRecord | null>;
+export interface SubscriptionRecord {
+  id: string;
+  accountId: number;
+  planId: string;
+  status: string;
+  startDate: string;
+  endDate?: string | null;
+  autoRenew: boolean;
+  billingInterval: string;
+  plan?: SubscriptionPlanSummary;
+}
+
+export type SubscriptionResponse = WazobiaApiResponse<{
+  subscription: SubscriptionRecord | null;
+}>;
 
 export interface CurrencyData {
   currency: 'NGN' | 'USD' | string;

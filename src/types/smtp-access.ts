@@ -9,10 +9,20 @@
 
 import { WazobiaApiResponse } from './common.js';
 
+export interface SmtpAccessConnection {
+  host: string;
+  port: number;
+  security: string;
+  usernames: string[];
+}
+
 export interface SmtpAccessData {
-  enabled: boolean;
+  paid: boolean;
   eligible: boolean;
-  status: string;
+  enabled: boolean;
+  persona?: string | null;
+  configured: boolean;
+  connection?: SmtpAccessConnection | null;
 }
 
 export interface UpdateSmtpAccessRequest {
@@ -20,3 +30,4 @@ export interface UpdateSmtpAccessRequest {
 }
 
 export type SmtpAccessResponse = WazobiaApiResponse<SmtpAccessData>;
+export type UpdateSmtpAccessResponse = WazobiaApiResponse<{ enabled: boolean }>;

@@ -23,11 +23,11 @@ describe('Billing, Units & Plans', () => {
             items: [
               {
                 id: 'inv_101',
-                invoiceNumber: 'INV-2026-0001',
                 amount: 5000,
                 currency: 'NGN',
                 status: 'paid',
-                product: 'Starter Plan',
+                purpose: 'subscription',
+                metadata: {},
                 createdAt: '2026-11-01T00:00:00Z',
               },
             ],
@@ -40,7 +40,7 @@ describe('Billing, Units & Plans', () => {
     const res = await client.billing.listInvoices();
 
     expect(capturedUrl).toBe('https://app.wazobiamail.com/api/v1/billing/invoices');
-    expect(res.data.items[0].invoiceNumber).toBe('INV-2026-0001');
+    expect(res.data.items[0].purpose).toBe('subscription');
   });
 
   it('downloads invoice PDF as binary ArrayBuffer', async () => {
@@ -74,9 +74,12 @@ describe('Billing, Units & Plans', () => {
           success: true,
           message: 'Units balance',
           data: {
-            balance: 25000,
-            lifetimePurchased: 50000,
-            lifetimeUsed: 25000,
+            includedAllowance: 50000,
+            includedUsed: 25000,
+            includedRemaining: 25000,
+            purchasedBalance: 0,
+            unlimited: false,
+            canBuyCredits: true,
           },
         })
       );
@@ -86,7 +89,7 @@ describe('Billing, Units & Plans', () => {
     const summary = await client.units.getSummary();
 
     expect(capturedUrl).toBe('https://app.wazobiamail.com/api/v1/units/summary');
-    expect(summary.data.balance).toBe(25000);
+    expect(summary.data.includedRemaining).toBe(25000);
   });
 
   it('queries subscription plans and effective limits', async () => {
@@ -98,16 +101,19 @@ describe('Billing, Units & Plans', () => {
           success: true,
           message: 'Effective limits',
           data: {
-            planId: 'plan_ent',
-            planName: 'Enterprise',
-            canSend: true,
-            canReceive: true,
-            domainsLimit: 50,
-            mailboxesLimit: 200,
-            hourlySendLimit: 100000,
-            dailySendLimit: 1000000,
-            storageQuotaBytes: 107374182400,
-            enterpriseInboxAllowed: true,
+            limits: {
+              accountId: 1,
+              planId: 'enterprise',
+              sendRateLimitPerMinute: 1000,
+              mailboxOpsPerMinute: 300,
+              mailboxLimit: 200,
+              baseMailboxLimit: 200,
+              additionalMailboxLimit: 0,
+              customDomainSendingEnabled: true,
+              domainLimit: 50,
+              receivingEnabled: true,
+              mailboxStorageGb: 100,
+            },
           },
         })
       );
@@ -117,7 +123,7 @@ describe('Billing, Units & Plans', () => {
     const limits = await client.plans.getEffectiveLimits();
 
     expect(capturedUrl).toBe('https://app.wazobiamail.com/api/v1/plans/effective');
-    expect(limits.data.enterpriseInboxAllowed).toBe(true);
+    expect(limits.data.limits.receivingEnabled).toBe(true);
   });
 
   it('checks account status via client.status.get()', async () => {
@@ -129,13 +135,21 @@ describe('Billing, Units & Plans', () => {
           success: true,
           message: 'Status ok',
           data: {
-            status: 'active',
-            accountId: 'acc_1',
-            planId: 'enterprise',
-            planTier: 'Enterprise',
-            email: 'admin@acme.com',
-            verified: true,
-            createdAt: '2026-11-01T00:00:00Z',
+            plan: {
+              id: 'enterprise',
+              name: 'Enterprise',
+              status: 'active',
+              billingInterval: 'monthly',
+              autoRenew: true,
+            },
+            units: {
+              monthlyAllocation: 1000000,
+              subscriptionUsed: 0,
+              subscriptionRemaining: 1000000,
+              purchasedBalance: 0,
+              totalRemaining: 1000000,
+              unlimited: false,
+            },
           },
         })
       );
@@ -145,24 +159,29 @@ describe('Billing, Units & Plans', () => {
     const status = await client.status.get();
 
     expect(capturedUrl).toBe('https://app.wazobiamail.com/api/v1/status');
-    expect(status.data.status).toBe('active');
+    expect(status.data.plan.status).toBe('active');
   });
 
   it('submits a customer support ticket', async () => {
+    let capturedUrl = '';
     let capturedBody: any;
-    const mockFetch = async (_input: RequestInfo | URL, init?: RequestInit) => {
+    const mockFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      capturedUrl = input.toString();
+      if (capturedUrl.endsWith('/auth/me')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: 'Current account',
+            data: { name: 'Ada Admin', email: 'admin@acme.com' },
+          })
+        );
+      }
       capturedBody = JSON.parse(init?.body as string);
       return new Response(
         JSON.stringify({
           success: true,
           message: 'Ticket created',
-          data: {
-            id: 'tkt_1',
-            ticketNumber: 'TKT-10024',
-            status: 'open',
-            subject: capturedBody.subject,
-            createdAt: '2026-11-09T00:00:00Z',
-          },
+          data: { id: 'tkt_1', ticketId: 'TKT-10024' },
         }),
         { status: 201 }
       );
@@ -174,7 +193,10 @@ describe('Billing, Units & Plans', () => {
       message: 'Need help setting up custom 2048-bit DKIM selector.',
     });
 
+    expect(capturedBody.name).toBe('Ada Admin');
+    expect(capturedBody.email).toBe('admin@acme.com');
     expect(capturedBody.subject).toBe('Inquiry regarding custom DKIM');
-    expect(res.data.ticketNumber).toBe('TKT-10024');
+    expect(capturedBody.category).toBe('general');
+    expect(res.data.ticketId).toBe('TKT-10024');
   });
 });

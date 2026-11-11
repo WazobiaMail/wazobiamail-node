@@ -175,4 +175,35 @@ describe('Messages & Email Sending', () => {
     expect(capturedUrl).toContain('status=delivered');
     expect(res.data.items[0].opensCount).toBe(2);
   });
+
+
+  it('uses the API multipart field name "files" for binary attachments', async () => {
+    let capturedUrl = '';
+    let capturedBody: any;
+
+    const mockFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      capturedUrl = input.toString();
+      capturedBody = init?.body;
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: 'Queued',
+          data: { result: { trackingId: 'trk_att_1', status: 'queued', recipients: 1 } },
+        })
+      );
+    };
+
+    const client = new WazobiaMail({ apiKey: 'wzbm_mock', fetch: mockFetch as any });
+
+    await client.messages.sendWithAttachments(
+      { to: 'user@example.com', subject: 'Invoice', text: 'Attached' },
+      [{ content: new Uint8Array([1, 2, 3]), fileName: 'invoice.bin', contentType: 'application/octet-stream' }]
+    );
+
+    expect(capturedUrl).toBe('https://app.wazobiamail.com/api/v1/sending/messages/with-attachments');
+    expect(capturedBody).toBeInstanceOf(FormData);
+    expect(capturedBody.get('message')).toContain('"subject":"Invoice"');
+    expect(capturedBody.getAll('files').length).toBe(1);
+    expect(capturedBody.getAll('attachments').length).toBe(0);
+  });
 });

@@ -9,14 +9,28 @@
 
 import { WazobiaApiResponse } from './common.js';
 
-export interface AccountStatusData {
+export interface AccountStatusPlan {
+  id: string;
+  name: string;
   status: string;
-  accountId: string;
-  planId: string;
-  planTier: string;
-  email: string;
-  verified: boolean;
-  createdAt: string;
+  billingInterval: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  autoRenew: boolean;
+}
+
+export interface AccountStatusUnits {
+  monthlyAllocation: number;
+  subscriptionUsed: number;
+  subscriptionRemaining: number;
+  purchasedBalance: number;
+  totalRemaining: number;
+  unlimited: boolean;
+}
+
+export interface AccountStatusData {
+  plan: AccountStatusPlan;
+  units: AccountStatusUnits;
 }
 
 export type AccountStatusResponse = WazobiaApiResponse<AccountStatusData>;

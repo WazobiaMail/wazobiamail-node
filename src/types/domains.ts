@@ -55,7 +55,7 @@ export interface VerifyDomainRequest {
   force?: boolean;
 }
 
-export type DomainListResponse = WazobiaApiResponse<SendingDomain[]>;
+export type DomainListResponse = WazobiaApiResponse<{ items: SendingDomain[] }>;
 export type DomainResponse = WazobiaApiResponse<SendingDomain>;
 
 export interface DnsRecordsData {
@@ -82,7 +82,8 @@ export interface CloudflareStatusData {
 export type CloudflareStatusResponse = WazobiaApiResponse<CloudflareStatusData>;
 
 export interface CloudflareConnectData {
-  authUrl: string;
+  authorizationUrl: string;
+  authUrl?: string;
 }
 
 export type CloudflareConnectResponse = WazobiaApiResponse<CloudflareConnectData>;

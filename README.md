@@ -362,11 +362,11 @@ const key = await client.apiKeys.create({
   scope: 'general',
 });
 
-console.log('New Scoped Secret:', key.data.apiKey);
+console.log('New Scoped Secret:', key.data.apiKey.apiKey);
 
 // Rotate key
-const rotated = await client.apiKeys.regenerate(key.data.id);
-console.log('Rotated Secret:', rotated.data.apiKey);
+const rotated = await client.apiKeys.regenerate(key.data.apiKey.id);
+console.log('Rotated Secret:', rotated.data.apiKey.apiKey);
 ```
 
 ---
@@ -376,7 +376,7 @@ console.log('Rotated Secret:', rotated.data.apiKey);
 ```typescript
 // Check credit balance
 const units = await client.units.getSummary();
-console.log('Available email credits:', units.data.balance);
+console.log('Available email credits:', units.data.includedRemaining + units.data.purchasedBalance);
 
 // List invoices
 const invoices = await client.billing.listInvoices();

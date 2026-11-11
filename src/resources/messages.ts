@@ -95,7 +95,7 @@ export class MessagesResource {
       const blob = attachment.content instanceof Blob
         ? attachment.content
         : new Blob([attachment.content as any], { type: attachment.contentType || 'application/octet-stream' });
-      formData.append('attachments', blob, attachment.fileName);
+      formData.append('files', blob, attachment.fileName);
     }
 
     return this.http.postMultipart<SendMessageResponse>('/sending/messages/with-attachments', formData, options);

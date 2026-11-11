@@ -37,7 +37,7 @@ export class SmtpRelaysResource {
    * Adds a new customer SMTP relay configuration.
    */
   public async create(request: CreateSmtpRelayRequest, options?: RequestOptions): Promise<SmtpRelayResponse> {
-    return this.http.post<SmtpRelayResponse>('/smtp-relays', request, options);
+    return this.http.post<SmtpRelayResponse>('/smtp-relays', this.toWire(request), options);
   }
 
   /**
@@ -48,7 +48,28 @@ export class SmtpRelaysResource {
     request: UpdateSmtpRelayRequest,
     options?: RequestOptions
   ): Promise<SmtpRelayResponse> {
-    return this.http.patch<SmtpRelayResponse>(`/smtp-relays/${encodeURIComponent(id)}`, request, options);
+    return this.http.patch<SmtpRelayResponse>(
+      `/smtp-relays/${encodeURIComponent(id)}`,
+      this.toWire(request),
+      options
+    );
+  }
+
+  /**
+   * The relay request DTO uses snake_case wire keys, unlike most of the API.
+   * Keep the public TypeScript surface camelCase and translate here.
+   */
+  private toWire(request: CreateSmtpRelayRequest | UpdateSmtpRelayRequest): Record<string, unknown> {
+    const wire: Record<string, unknown> = {};
+    if (request.name !== undefined) wire.name = request.name;
+    if (request.smtpHost !== undefined) wire.smtp_host = request.smtpHost;
+    if (request.smtpPort !== undefined) wire.smtp_port = request.smtpPort;
+    if (request.smtpUsername !== undefined) wire.smtp_username = request.smtpUsername;
+    if (request.smtpPassword !== undefined) wire.smtp_password = request.smtpPassword;
+    if (request.smtpSecurity !== undefined) wire.smtp_security = request.smtpSecurity;
+    if (request.status !== undefined) wire.status = request.status;
+    if (request.isDefault !== undefined) wire.is_default = request.isDefault;
+    return wire;
   }
 
   /**

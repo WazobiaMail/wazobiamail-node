@@ -12,32 +12,40 @@ import { WazobiaApiResponse } from './common.js';
 export interface PlanRecord {
   id: string;
   name: string;
-  slug: string;
-  monthlyPriceNgn: number;
-  monthlyPriceUsd: number;
-  yearlyPriceNgn?: number;
-  yearlyPriceUsd?: number;
-  features: string[];
-  maxDomains: number;
-  maxMailboxes: number;
-  mailboxStorageGb: number;
-  sendingQuotaHourly: number;
-  sendingQuotaDaily: number;
+  usdPrice: number;
+  nairaPrice: number;
+  yearlyUsdPrice?: number | null;
+  yearlyNairaPrice?: number | null;
+  intervalPrices?: Record<string, unknown>;
+  hourlyQuota: number;
+  dailyQuota: number;
+  monthlyQuota: number;
+  sendRateLimitPerMinute: number;
+  dataRetentionDays: number;
+  features: Record<string, unknown>;
+  limits: Record<string, unknown>;
+  overageUsdPer1000: number;
+  dedicatedIpAddonUsd: number;
+  status: string;
 }
 
-export type PlansResponse = WazobiaApiResponse<PlanRecord[]>;
+export type PlansResponse = WazobiaApiResponse<{
+  items: PlanRecord[];
+  pagination: import('./common.js').Pagination;
+}>;
 
 export interface EffectiveLimits {
+  accountId: number;
   planId: string;
-  planName: string;
-  canSend: boolean;
-  canReceive: boolean;
-  domainsLimit: number;
-  mailboxesLimit: number;
-  hourlySendLimit: number;
-  dailySendLimit: number;
-  storageQuotaBytes: number;
-  enterpriseInboxAllowed: boolean;
+  sendRateLimitPerMinute: number;
+  mailboxOpsPerMinute: number;
+  mailboxLimit: number;
+  baseMailboxLimit: number;
+  additionalMailboxLimit: number;
+  customDomainSendingEnabled: boolean;
+  domainLimit: number;
+  receivingEnabled: boolean;
+  mailboxStorageGb: number;
 }
 
-export type EffectiveLimitsResponse = WazobiaApiResponse<EffectiveLimits>;
+export type EffectiveLimitsResponse = WazobiaApiResponse<{ limits: EffectiveLimits }>;

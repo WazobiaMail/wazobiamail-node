@@ -19,17 +19,19 @@ describe('Domains & DNS Management', () => {
         JSON.stringify({
           success: true,
           message: 'Domains retrieved',
-          data: [
-            {
-              id: 'dom_123',
-              domain: 'example.com',
-              isDefault: true,
-              verified: true,
-              status: 'active',
-              createdAt: '2026-11-01T00:00:00Z',
-              updatedAt: '2026-11-01T00:00:00Z',
-            },
-          ],
+          data: {
+            items: [
+              {
+                id: 'dom_123',
+                domain: 'example.com',
+                isDefault: true,
+                verified: true,
+                status: 'active',
+                createdAt: '2026-11-01T00:00:00Z',
+                updatedAt: '2026-11-01T00:00:00Z',
+              },
+            ],
+          },
         })
       );
     };
@@ -38,8 +40,8 @@ describe('Domains & DNS Management', () => {
     const res = await client.domains.list();
 
     expect(capturedUrl).toBe('https://app.wazobiamail.com/api/v1/sending/domains');
-    expect(res.data.length).toBe(1);
-    expect(res.data[0].domain).toBe('example.com');
+    expect(res.data.items.length).toBe(1);
+    expect(res.data.items[0].domain).toBe('example.com');
   });
 
   it('creates a new domain with custom configuration', async () => {

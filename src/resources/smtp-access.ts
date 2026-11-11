@@ -8,7 +8,7 @@
  */
 
 import { HttpClient, RequestOptions } from '../http.js';
-import { SmtpAccessResponse, UpdateSmtpAccessRequest } from '../types/index.js';
+import { SmtpAccessResponse, UpdateSmtpAccessRequest, UpdateSmtpAccessResponse } from '../types/index.js';
 
 export class SmtpAccessResource {
   constructor(private readonly http: HttpClient) {}
@@ -23,7 +23,7 @@ export class SmtpAccessResource {
   /**
    * Enables or disables SMTP relay access for the account.
    */
-  public async update(request: UpdateSmtpAccessRequest, options?: RequestOptions): Promise<SmtpAccessResponse> {
+  public async update(request: UpdateSmtpAccessRequest, options?: RequestOptions): Promise<UpdateSmtpAccessResponse> {
     return this.http.put<SmtpAccessResponse>('/sending/smtp-access', request, options);
   }
 }
