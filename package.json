@@ -1,7 +1,7 @@
 {
   "name": "wazobiamail",
   "version": "0.1.0",
-  "description": "Official WazobiaMail SDK for TypeScript and JavaScript - Transactional Email API, Hosted Mailboxes, and Deliverability",
+  "description": "Official WazobiaMail SDK for transactional email via API. WazobiaMail is a Resend alternative that also supports SMTP, with sending domains, hosted mailboxes, and deliverability tools.",
   "author": "Bowofade Oyerinde <bowofade@bonifade.com> (https://github.com/oyenet1)",
   "license": "MIT",
   "repository": {
@@ -21,7 +21,9 @@
     "mailboxes",
     "deliverability",
     "spam-check",
-    "typescript"
+    "typescript",
+    "resend-alternative",
+    "email-api"
   ],
   "type": "module",
   "main": "./dist/index.cjs",
