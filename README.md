@@ -152,8 +152,8 @@ const report = await client.messages.spamCheck({
 
 console.log('Deliverability Score (0-100):', report.data.deliverabilityScore);
 console.log('Spam Score:', report.data.score); // e.g. 4.2
-console.log('Findings:', report.data.findings);
-console.log('Recommendations:', report.data.recommendations);
+console.log('Rules:', report.data.rules);
+console.log('Summary:', report.data.summary);
 ```
 
 ---
@@ -183,16 +183,17 @@ Every message transitions through well-defined lifecycle states:
 // Query tracking details and full receipt timeline
 const tracking = await client.messages.getTracked('trk_abc123456');
 
-console.log('Status:', tracking.data.status); // 'delivered', 'opened', 'bounced'
-console.log('Delivered At:', tracking.data.deliveredAt);
-console.log('Opens Count (Read Receipts):', tracking.data.openCount);
-console.log('Clicks Count (Click Receipts):', tracking.data.clickCount);
+const detail = tracking.data;
+console.log('Status:', detail.message.status); // 'delivered', 'opened', 'bounced'
+console.log('Last Delivery Event:', detail.message.lastDeliveryEventAt);
+console.log('Opens Count (Read Receipts):', detail.message.openCount);
+console.log('Clicks Count (Click Receipts):', detail.message.clickCount);
 
 // Inspect granular event stream
-for (const event of tracking.data.events) {
-  console.log(`[${event.occurredAt}] ${event.eventType} - Recipient: ${event.recipient}`);
-  if (event.linkUrl) {
-    console.log(`Clicked URL: ${event.linkUrl}`);
+for (const event of detail.events) {
+  console.log(`[${event.occurredAt}] ${event.eventType} - Recipient: ${event.recipientEmail ?? ''}`);
+  if (event.clickUrl) {
+    console.log(`Clicked URL: ${event.clickUrl}`);
   }
 }
 ```
@@ -203,12 +204,10 @@ Query delivery rates, open rates, click-through rates (CTR), and bounce classifi
 ```typescript
 const stats = await client.messages.listTracked({
   status: 'delivered',
-  fromDate: '2026-11-01',
-  toDate: '2026-11-09',
   limit: 100,
 });
 
-console.log('Total tracked messages:', stats.data.total);
+console.log('Total tracked messages:', stats.data.summary.messages);
 for (const msg of stats.data.messages) {
   console.log(`${msg.trackingId}: ${msg.subject} -> ${msg.status} (${msg.openCount} opens, ${msg.clickCount} clicks)`);
 }
@@ -227,20 +226,20 @@ const domain = await client.domains.create({
   mailMode: 'hosted', // 'hosted' or 'sending_only'
 });
 
-console.log('Domain ID:', domain.data.id);
+console.log('Domain ID:', domain.data.domain.id);
 
 // 2. Fetch required DNS records (SPF, DKIM, MX, DMARC)
-const dns = await client.domains.getDnsRecords(domain.data.id);
-for (const record of dns.data.records) {
+const dns = await client.domains.getDnsRecords(domain.data.domain.id);
+for (const record of dns.data.domain.records) {
   console.log(`${record.recordType} ${record.name} -> ${record.value}`);
 }
 
 // 3. Trigger verification check
-const check = await client.domains.verify(domain.data.id, { force: true });
-console.log('Verified:', check.data.verified);
+const check = await client.domains.verify(domain.data.domain.id, { force: true });
+console.log('Verification status:', check.data.verification.verificationStatus);
 
 // 4. One-click Cloudflare DNS Sync
-await client.domains.cloudflare.sync({ domainId: domain.data.id });
+await client.domains.cloudflare.sync({ domainId: domain.data.domain.id });
 ```
 
 ---
@@ -329,26 +328,29 @@ const mailbox = await client.mailboxes.create({
   displayName: 'Support Team',
 });
 
-console.log('Mailbox email:', mailbox.data.mailbox.email);
-console.log('Generated SMTP/IMAP Password:', mailbox.data.credential?.password);
+console.log('Mailbox email:', mailbox.data.address);
+
+// Issue an SMTP/IMAP password separately; the secret is returned only once.
+const credential = await client.mailboxes.createCredentials(mailbox.data.id);
+console.log('Generated SMTP/IMAP Password:', credential.data.credential.password);
 
 // 2. Query enterprise headless inbox messages (Enterprise Plan required)
-const inbox = await client.mailboxes.messages.list(mailbox.data.mailbox.id, {
+const inbox = await client.mailboxes.messages.list(mailbox.data.id, {
   unreadOnly: true,
   limit: 20,
 });
 
 for (const msg of inbox.data.items) {
-  console.log(`[${msg.id}] From: ${msg.from} | Subject: ${msg.subject}`);
+  console.log(`[${msg.id}] From: ${msg.from[0]?.email ?? ''} | Subject: ${msg.subject}`);
 }
 
 // 3. Read full message body and attachments
-const detail = await client.mailboxes.messages.get(mailbox.data.mailbox.id, inbox.data.items[0].id);
+const detail = await client.mailboxes.messages.get(mailbox.data.id, inbox.data.items[0].id);
 console.log('HTML Body:', detail.data.htmlBody);
 console.log('Attachments:', detail.data.attachments);
 
 // 4. Delete processed message
-await client.mailboxes.messages.delete(mailbox.data.mailbox.id, inbox.data.items[0].id);
+await client.mailboxes.messages.delete(mailbox.data.id, inbox.data.items[0].id);
 ```
 
 ---

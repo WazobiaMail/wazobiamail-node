@@ -56,13 +56,19 @@ describe('Domains & DNS Management', () => {
           success: true,
           message: 'Domain created',
           data: {
-            id: 'dom_new_1',
-            domain: capturedBody.domain,
-            isDefault: false,
-            verified: false,
-            status: 'pending',
-            createdAt: '2026-11-09T00:00:00Z',
-            updatedAt: '2026-11-09T00:00:00Z',
+            domain: {
+              id: 'dom_new_1',
+              accountId: 1,
+              domain: capturedBody.domain,
+              requestedDomain: capturedBody.domain,
+              verificationStatus: 'pending',
+              isDefault: false,
+              domainRole: 'primary',
+              parentDomainId: null,
+              createDefaultInboxes: true,
+              mailMode: 'hosted',
+              createdAt: '2026-11-09T00:00:00Z',
+            },
           },
         }),
         { status: 201 }
@@ -78,7 +84,7 @@ describe('Domains & DNS Management', () => {
 
     expect(capturedMethod).toBe('POST');
     expect(capturedBody.domain).toBe('updates.brand.com');
-    expect(res.data.id).toBe('dom_new_1');
+    expect(res.data.domain.id).toBe('dom_new_1');
   });
 
   it('fetches required DNS records for domain verification', async () => {
@@ -90,11 +96,17 @@ describe('Domains & DNS Management', () => {
           success: true,
           message: 'DNS records loaded',
           data: {
-            domain: 'brand.com',
-            records: [
-              { recordType: 'TXT', name: 'brand.com', value: 'v=spf1 include:_spf.wazobiamail.com ~all', status: 'valid' },
-              { recordType: 'CNAME', name: 'wzbm._domainkey.brand.com', value: 'dkim.wazobiamail.com', status: 'valid' },
-            ],
+            domain: {
+              provisioning: false,
+              domainId: 'dom_123',
+              domain: 'brand.com',
+              verificationStatus: 'pending',
+              records: [
+                { id: 'dns_1', recordType: 'TXT', host: 'brand.com', value: 'v=spf1 include:_spf.wazobiamail.com ~all', ttl: 3600, status: 'valid', lastCheckedAt: null },
+                { id: 'dns_2', recordType: 'CNAME', host: 'wzbm._domainkey.brand.com', value: 'dkim.wazobiamail.com', ttl: 3600, status: 'valid', lastCheckedAt: null },
+              ],
+              copyBlock: '',
+            },
           },
         })
       );
@@ -104,8 +116,8 @@ describe('Domains & DNS Management', () => {
     const res = await client.domains.getDnsRecords('dom_123');
 
     expect(capturedUrl).toBe('https://app.wazobiamail.com/api/v1/sending/domains/dom_123/dns-records');
-    expect(res.data.records.length).toBe(2);
-    expect(res.data.records[0].recordType).toBe('TXT');
+    expect(res.data.domain.records.length).toBe(2);
+    expect(res.data.domain.records[0].recordType).toBe('TXT');
   });
 
   it('triggers domain DNS verification check', async () => {
@@ -117,9 +129,14 @@ describe('Domains & DNS Management', () => {
           success: true,
           message: 'Verification complete',
           data: {
-            verified: true,
-            records: [],
-            domain: { id: 'dom_123', domain: 'brand.com', verified: true },
+            verification: {
+              domainId: 'dom_123',
+              domain: 'brand.com',
+              verificationStatus: 'verified',
+              verifiedCount: 2,
+              pendingCount: 0,
+              checks: [],
+            },
           },
         })
       );
@@ -129,7 +146,7 @@ describe('Domains & DNS Management', () => {
     const res = await client.domains.verify('dom_123', { force: true });
 
     expect(capturedUrl).toBe('https://app.wazobiamail.com/api/v1/sending/domains/dom_123/verify');
-    expect(res.data.verified).toBe(true);
+    expect(res.data.verification.verificationStatus).toBe('verified');
   });
 
   it('supports Cloudflare DNS integration sub-resource', async () => {

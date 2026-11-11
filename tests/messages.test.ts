@@ -112,9 +112,20 @@ describe('Messages & Email Sending', () => {
           data: {
             score: 0.5,
             threshold: 5.0,
+            isSpam: false,
+            rating: 'excellent',
+            badgeColor: 'green',
             deliverabilityScore: 95,
-            findings: [{ rule: 'SUBJ_ALL_CAPS', score: 0.5, description: 'Subject in uppercase' }],
-            recommendations: ['Avoid all-caps subjects'],
+            summary: 'Your message looks good.',
+            rules: [
+              {
+                code: 'SUBJ_ALL_CAPS',
+                points: 0.5,
+                title: 'All-caps subject',
+                description: 'The subject is in uppercase.',
+                recommendation: 'Use sentence case.',
+              },
+            ],
           },
         })
       );
@@ -133,7 +144,7 @@ describe('Messages & Email Sending', () => {
     expect(capturedUrl).toBe('https://app.wazobiamail.com/api/v1/sending/spam-check');
     expect(capturedBody.subject).toBe('Test Subject');
     expect(response.data.deliverabilityScore).toBe(95);
-    expect(response.data.findings.length).toBe(1);
+    expect(response.data.rules.length).toBe(1);
   });
 
   it('queries tracked messages with filters', async () => {
@@ -146,19 +157,33 @@ describe('Messages & Email Sending', () => {
           success: true,
           message: 'ok',
           data: {
-            items: [
+            messages: [
               {
                 trackingId: 'trk_1',
+                senderDomain: 'store.com',
                 subject: 'Order Confirmation',
-                from: 'hello@store.com',
                 recipientsCount: 1,
-                opensCount: 2,
-                clicksCount: 1,
+                acceptedCount: 1,
+                deliveredCount: 1,
+                bouncedCount: 0,
+                openCount: 2,
+                clickCount: 1,
                 status: 'delivered',
-                sentAt: '2026-11-09T00:00:00Z',
+                createdAt: '2026-11-09T00:00:00Z',
+                lastOpenedAt: '2026-11-09T01:00:00Z',
+                lastClickedAt: null,
+                lastDeliveryEventAt: '2026-11-09T00:00:30Z',
               },
             ],
-            total: 1,
+            summary: {
+              messages: 1,
+              recipients: 1,
+              accepted: 1,
+              delivered: 1,
+              bounced: 0,
+              opens: 2,
+              clicks: 1,
+            },
           },
         })
       );
@@ -173,7 +198,7 @@ describe('Messages & Email Sending', () => {
     expect(capturedUrl).toContain('/sending/tracking/messages?');
     expect(capturedUrl).toContain('limit=10');
     expect(capturedUrl).toContain('status=delivered');
-    expect(res.data.items[0].opensCount).toBe(2);
+    expect(res.data.messages[0].openCount).toBe(2);
   });
 
 

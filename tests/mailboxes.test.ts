@@ -11,32 +11,26 @@ import { describe, it, expect } from 'bun:test';
 import { WazobiaMail } from '../src/index.js';
 
 describe('Mailboxes & Enterprise Headless Inbox', () => {
-  it('creates a hosted mailbox and receives credentials', async () => {
+  it('creates a hosted mailbox', async () => {
     let capturedBody: any;
     const mockFetch = async (_input: RequestInfo | URL, init?: RequestInit) => {
       capturedBody = JSON.parse(init?.body as string);
       return new Response(
         JSON.stringify({
           success: true,
-          message: 'Mailbox provisioned',
+          message: 'Your mailbox is ready.',
           data: {
-            mailbox: {
-              id: 'mbx_123',
-              domainId: capturedBody.domainId,
-              email: `${capturedBody.localPart}@brand.com`,
-              localPart: capturedBody.localPart,
-              displayName: capturedBody.displayName,
-              storageUsageBytes: 0,
-              status: 'active',
-              createdAt: '2026-11-09T00:00:00Z',
-              updatedAt: '2026-11-09T00:00:00Z',
-            },
-            credential: {
-              id: 'cred_1',
-              username: `${capturedBody.localPart}@brand.com`,
-              password: 'GeneratedSecurePassword123!',
-              createdAt: '2026-11-09T00:00:00Z',
-            },
+            id: 'mbx_123',
+            domainId: capturedBody.domainId,
+            address: `${capturedBody.localPart}@brand.com`,
+            localPart: capturedBody.localPart,
+            displayName: capturedBody.displayName,
+            status: 'active',
+            isPlatformSubdomain: false,
+            autoProvisioned: false,
+            role: 'general',
+            createdAt: '2026-11-09T00:00:00Z',
+            updatedAt: '2026-11-09T00:00:00Z',
           },
         }),
         { status: 201 }
@@ -51,8 +45,8 @@ describe('Mailboxes & Enterprise Headless Inbox', () => {
     });
 
     expect(capturedBody.localPart).toBe('support');
-    expect(res.data.mailbox.email).toBe('support@brand.com');
-    expect(res.data.credential?.password).toBe('GeneratedSecurePassword123!');
+    expect(res.data.address).toBe('support@brand.com');
+    expect(res.data.role).toBe('general');
   });
 
   it('queries storage usage metrics via GET /mailboxes/storage', async () => {
@@ -64,10 +58,19 @@ describe('Mailboxes & Enterprise Headless Inbox', () => {
           success: true,
           message: 'Storage metrics',
           data: {
-            totalBytes: 524288000,
-            quotaBytes: 10737418240,
-            percentUsed: 4.88,
-            mailboxesCount: 3,
+            mailboxes: [],
+            customers: [{ accountId: 1, usedBytes: 524288000, allocatedBytes: 10737418240, mailboxes: 3 }],
+            domains: [],
+            measurement: 'logical mailbox bytes',
+            plan: {
+              mailboxLimit: 50,
+              baseMailboxLimit: 50,
+              additionalMailboxLimit: 0,
+              mailboxesUsed: 3,
+              mailboxRemaining: 47,
+              storageTotalBytes: 10737418240,
+              storageAllocatedBytes: 3221225472,
+            },
           },
         })
       );
@@ -77,8 +80,8 @@ describe('Mailboxes & Enterprise Headless Inbox', () => {
     const res = await client.mailboxes.getStorage();
 
     expect(capturedUrl).toBe('https://app.wazobiamail.com/api/v1/mailboxes/storage');
-    expect(res.data.mailboxesCount).toBe(3);
-    expect(res.data.percentUsed).toBe(4.88);
+    expect(res.data.plan.mailboxesUsed).toBe(3);
+    expect(res.data.customers.length).toBe(1);
   });
 
   it('queries enterprise inbox messages with pagination and unread filter', async () => {
@@ -93,12 +96,13 @@ describe('Mailboxes & Enterprise Headless Inbox', () => {
             items: [
               {
                 id: 'msg_001',
-                messageId: '<id@remote.com>',
+                threadId: 'thread_1',
                 subject: 'Customer Inquiry #1024',
-                from: { name: 'Alice', email: 'alice@client.com' },
-                to: ['support@brand.com'],
-                date: '2026-11-09T00:00:00Z',
-                isRead: false,
+                preview: 'Need help with invoice',
+                from: [{ name: 'Alice', email: 'alice@client.com' }],
+                to: [{ name: 'Support', email: 'support@brand.com' }],
+                receivedAt: '2026-11-09T00:00:00Z',
+                isUnread: true,
                 hasAttachments: true,
                 sizeBytes: 15420,
               },
@@ -118,6 +122,7 @@ describe('Mailboxes & Enterprise Headless Inbox', () => {
     expect(capturedUrl).toContain('unreadOnly=true');
     expect(capturedUrl).toContain('limit=25');
     expect(res.data.items[0].subject).toBe('Customer Inquiry #1024');
+    expect(res.data.items[0].isUnread).toBe(true);
   });
 
   it('retrieves detailed enterprise inbox message body and attachments', async () => {
@@ -130,19 +135,22 @@ describe('Mailboxes & Enterprise Headless Inbox', () => {
           message: 'Message details',
           data: {
             id: 'msg_001',
-            messageId: '<id@remote.com>',
+            threadId: 'thread_1',
             subject: 'Customer Inquiry #1024',
-            from: 'Alice <alice@client.com>',
-            to: ['support@brand.com'],
-            date: '2026-11-09T00:00:00Z',
-            isRead: true,
+            preview: 'Need help with invoice',
+            from: [{ name: 'Alice', email: 'alice@client.com' }],
+            to: [{ name: 'Support', email: 'support@brand.com' }],
+            cc: [],
+            bcc: [],
+            replyTo: [],
+            receivedAt: '2026-11-09T00:00:00Z',
+            isUnread: false,
             hasAttachments: true,
             sizeBytes: 15420,
             htmlBody: '<p>Need help with invoice</p>',
             textBody: 'Need help with invoice',
-            headers: { 'x-priority': '1' },
             attachments: [
-              { id: 'att_1', fileName: 'receipt.pdf', contentType: 'application/pdf', sizeBytes: 14000 },
+              { blobId: 'blob_1', name: 'receipt.pdf', type: 'application/pdf', sizeBytes: 14000 },
             ],
           },
         })
@@ -153,7 +161,7 @@ describe('Mailboxes & Enterprise Headless Inbox', () => {
     const res = await client.mailboxes.messages.get('mbx_123', 'msg_001');
 
     expect(capturedUrl).toBe('https://app.wazobiamail.com/api/v1/mailboxes/mbx_123/messages/msg_001');
-    expect(res.data.attachments[0].fileName).toBe('receipt.pdf');
+    expect(res.data.attachments[0].name).toBe('receipt.pdf');
     expect(res.data.htmlBody).toBe('<p>Need help with invoice</p>');
   });
 

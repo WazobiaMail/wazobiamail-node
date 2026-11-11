@@ -123,57 +123,82 @@ export type SendMessageResponse = WazobiaApiResponse<{
 }>;
 
 export interface AttachmentUploadResult {
-  url: string;
   fileName: string;
+  contentType?: string | null;
   sizeBytes: number;
-  contentType?: string;
+  publicUrl?: string | null;
 }
 
-export type AttachmentUploadResponse = WazobiaApiResponse<AttachmentUploadResult>;
+export type AttachmentUploadResponse = WazobiaApiResponse<{ file: AttachmentUploadResult }>;
 
 export interface SpamRuleFinding {
-  rule: string;
-  score: number;
+  code: string;
+  points: number;
+  title: string;
   description: string;
+  recommendation: string;
 }
 
 export interface SpamCheckRequest {
   subject: string;
   htmlBody?: string;
   textBody?: string;
+  from?: string;
+  replyTo?: string;
+  headers?: Record<string, string>;
 }
 
 export interface SpamCheckData {
   score: number;
   threshold: number;
+  isSpam: boolean;
+  rating: string;
+  badgeColor: string;
   deliverabilityScore: number;
-  findings: SpamRuleFinding[];
-  recommendations: string[];
+  summary: string;
+  rules: SpamRuleFinding[];
 }
 
 export type SpamCheckResponse = WazobiaApiResponse<SpamCheckData>;
 
 export interface TrackingMessageSummary {
   trackingId: string;
-  subject: string;
-  from: string;
+  senderDomain: string;
+  subject: string | null;
   recipientsCount: number;
-  opensCount: number;
-  clicksCount: number;
+  acceptedCount: number;
+  deliveredCount: number;
+  bouncedCount: number;
+  openCount: number;
+  clickCount: number;
   status: string;
-  sentAt: string;
+  createdAt: string;
+  lastOpenedAt?: string | null;
+  lastClickedAt?: string | null;
+  lastDeliveryEventAt?: string | null;
+}
+
+export interface TrackingSummary {
+  messages: number;
+  recipients: number;
+  accepted: number;
+  delivered: number;
+  bounced: number;
+  opens: number;
+  clicks: number;
 }
 
 export interface TrackingEvent {
   id: string;
   eventType: 'open' | 'click' | 'delivery' | 'bounce' | string;
-  timestamp: string;
-  ipAddress?: string;
-  userAgent?: string;
-  url?: string;
+  recipientEmail?: string | null;
+  clickUrl?: string | null;
+  occurredAt: string;
+  engagement?: Record<string, unknown> | null;
 }
 
-export interface TrackingMessageDetail extends TrackingMessageSummary {
+export interface TrackingMessageDetail {
+  message: TrackingMessageSummary;
   events: TrackingEvent[];
 }
 
@@ -184,8 +209,8 @@ export interface ListTrackingMessagesParams {
 }
 
 export type TrackingMessagesResponse = WazobiaApiResponse<{
-  items: TrackingMessageSummary[];
-  total: number;
+  messages: TrackingMessageSummary[];
+  summary: TrackingSummary;
 }>;
 
 export type TrackingMessageDetailResponse = WazobiaApiResponse<TrackingMessageDetail>;

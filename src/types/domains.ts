@@ -10,26 +10,33 @@
 import { WazobiaApiResponse } from './common.js';
 
 export interface DnsRecord {
+  id?: string;
   recordType: 'TXT' | 'MX' | 'CNAME' | 'A' | 'AAAA' | string;
-  name: string;
+  host?: string;
+  name?: string;
   value: string;
   priority?: number;
   ttl?: number;
   status: 'valid' | 'pending' | 'failed' | string;
+  lastCheckedAt?: string | null;
 }
 
 export interface SendingDomain {
   id: string;
+  accountId?: number;
   domain: string;
+  requestedDomain?: string | null;
+  verificationStatus: 'verified' | 'pending' | 'failed' | string;
   isDefault: boolean;
-  verified: boolean;
-  status: string;
+  domainRole?: 'primary' | 'sending' | string;
+  parentDomainId?: string | null;
+  createDefaultInboxes?: boolean;
   mailMode?: 'hosted' | 'sending_only' | string;
-  useRootDomain?: boolean;
-  sendingSubdomain?: string;
-  dnsRecords?: DnsRecord[];
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
+  /** Legacy convenience flags; prefer verificationStatus. */
+  verified?: boolean;
+  status?: string;
 }
 
 export interface CreateDomainRequest {
@@ -56,22 +63,37 @@ export interface VerifyDomainRequest {
 }
 
 export type DomainListResponse = WazobiaApiResponse<{ items: SendingDomain[] }>;
-export type DomainResponse = WazobiaApiResponse<SendingDomain>;
+export type DomainResponse = WazobiaApiResponse<{ domain: SendingDomain }>;
 
-export interface DnsRecordsData {
+export interface DomainDnsPayload {
+  provisioning: boolean;
+  domainId: string;
   domain: string;
+  verificationStatus: string;
   records: DnsRecord[];
+  copyBlock: string;
 }
 
-export type DnsRecordsResponse = WazobiaApiResponse<DnsRecordsData>;
+export type DnsRecordsResponse = WazobiaApiResponse<{ domain: DomainDnsPayload }>;
 
-export interface VerifyDomainData {
-  verified: boolean;
-  records: DnsRecord[];
-  domain: SendingDomain;
+export interface DomainVerificationCheck {
+  recordType: string;
+  host: string;
+  expectedValue: string;
+  matched: boolean;
+  observedValues: string[];
 }
 
-export type VerifyDomainResponse = WazobiaApiResponse<VerifyDomainData>;
+export interface DomainVerificationData {
+  domainId: string;
+  domain: string;
+  verificationStatus: string;
+  verifiedCount: number;
+  pendingCount: number;
+  checks: DomainVerificationCheck[];
+}
+
+export type VerifyDomainResponse = WazobiaApiResponse<{ verification: DomainVerificationData }>;
 
 export interface CloudflareStatusData {
   connected: boolean;
@@ -93,11 +115,19 @@ export interface CloudflareSyncRequest {
 }
 
 export interface CloudflareSyncData {
-  synced: boolean;
-  recordsCount: number;
+  zone?: string;
+  added?: number;
+  updated?: number;
+  records?: number;
+  verificationStatus?: string;
+  receivingReady?: boolean;
+  dmarcReady?: boolean;
+  verifiedCount?: number;
+  pendingCount?: number;
+  note?: string;
 }
 
-export type CloudflareSyncResponse = WazobiaApiResponse<CloudflareSyncData>;
+export type CloudflareSyncResponse = WazobiaApiResponse<CloudflareSyncData & Record<string, unknown>>;
 
 export interface DnsProviderData {
   provider: string;
