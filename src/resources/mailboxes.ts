@@ -138,12 +138,13 @@ export class MailboxesResource {
    */
   public async createCredentials(
     id: string,
-    password?: string,
     options?: RequestOptions
   ): Promise<CreateCredentialsResponse> {
+    // The API generates the password and returns it once; it does not accept a
+    // caller-supplied password here (use update() for that).
     return this.http.post<CreateCredentialsResponse>(
       `/mailboxes/${encodeURIComponent(id)}/credentials`,
-      password ? { password } : {},
+      {},
       options
     );
   }
@@ -153,12 +154,11 @@ export class MailboxesResource {
    */
   public async rotateCredentials(
     id: string,
-    password?: string,
     options?: RequestOptions
   ): Promise<RotateCredentialsResponse> {
     return this.http.post<RotateCredentialsResponse>(
       `/mailboxes/${encodeURIComponent(id)}/credentials/rotate`,
-      password ? { password } : {},
+      {},
       options
     );
   }
