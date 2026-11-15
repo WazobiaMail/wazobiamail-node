@@ -110,6 +110,10 @@ export interface SendMessageRequest {
    * URL attachments (maximum 10, combined size <= 5MB).
    */
   attachments?: UrlAttachment[];
+  /**
+   * Direct binary/file attachments sent via multipart upload (`/sending/messages/with-attachments`).
+   */
+  files?: FileAttachment[];
 }
 
 export interface SendMessageResult {

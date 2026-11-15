@@ -9,6 +9,12 @@
 
 import { WazobiaApiResponse } from './common.js';
 
+export interface SupportUpload {
+  filename: string;
+  /** Base64-encoded file bytes (max 5 MiB per file, 10 MiB per message). */
+  data: string;
+}
+
 export interface CreateSupportTicketRequest {
   subject: string;
   message: string;
@@ -19,6 +25,7 @@ export interface CreateSupportTicketRequest {
   priority?: 'low' | 'medium' | 'high' | string;
   category?: string;
   domain?: string;
+  attachments?: SupportUpload[];
 }
 
 export interface SupportTicketData {

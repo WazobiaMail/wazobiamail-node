@@ -231,4 +231,44 @@ describe('Messages & Email Sending', () => {
     expect(capturedBody.getAll('files').length).toBe(1);
     expect(capturedBody.getAll('attachments').length).toBe(0);
   });
+
+  it('routes client.send({ files }) to multipart endpoint and sanitizes filenames', async () => {
+    let capturedUrl = '';
+    let capturedBody: any;
+
+    const mockFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      capturedUrl = input.toString();
+      capturedBody = init?.body;
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: 'Queued',
+          data: { result: { trackingId: 'trk_att_2', status: 'queued', recipients: 1 } },
+        })
+      );
+    };
+
+    const client = new WazobiaMail({ apiKey: 'wzbm_mock', fetch: mockFetch as any });
+    await client.send({
+      to: 'user@example.com',
+      subject: 'Report',
+      text: 'Attached report',
+      files: [{ content: 'pdf-bytes', fileName: '../bad"\r\nname.pdf', contentType: 'application/pdf' }],
+    });
+
+    expect(capturedUrl).toBe('https://app.wazobiamail.com/api/v1/sending/messages/with-attachments');
+    const uploaded = capturedBody.get('files') as File;
+    expect(uploaded.name).toBe('.._bad___name.pdf');
+  });
+
+  it('rejects empty attachments, unsafe baseUrl schemes, and CRLF headers', async () => {
+    expect(() => new WazobiaMail({ apiKey: 'wzbm_mock', baseUrl: 'javascript:alert(1)' })).toThrow();
+    expect(() => new WazobiaMail({ apiKey: 'wzbm_mock\r\nX-Injected: 1' })).toThrow();
+
+    const client = new WazobiaMail({ apiKey: 'wzbm_mock', fetch: (async () => new Response('{}')) as any });
+    await expect(client.messages.uploadAttachment({ content: new Uint8Array(), fileName: 'empty.txt' })).rejects.toThrow();
+    await expect(
+      client.messages.send({ to: 'a@b.com', subject: 'hi', text: 'hi' }, { idempotencyKey: 'abc\r\nEvil: 1' })
+    ).rejects.toThrow();
+  });
 });

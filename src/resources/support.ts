@@ -59,6 +59,7 @@ export class SupportResource {
         category: request.category ?? 'general',
         priority: request.priority ?? 'normal',
         ...(request.domain ? { domain: request.domain } : {}),
+        ...(request.attachments && request.attachments.length > 0 ? { attachments: request.attachments } : {}),
       },
       options
     );

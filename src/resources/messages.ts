@@ -8,6 +8,7 @@
  */
 
 import { HttpClient, RequestOptions } from '../http.js';
+import { WazobiaValidationError } from '../errors.js';
 import {
   SendMessageRequest,
   SendMessageResponse,
@@ -20,6 +21,41 @@ import {
   TrackingMessagesResponse,
   TrackingMessageDetailResponse,
 } from '../types/index.js';
+
+function sanitizeFileName(name?: string): string {
+  const cleaned = (name || '')
+    .replace(/[\r\n\0"\\/]/g, '_')
+    .trim();
+  return cleaned.length > 0 ? cleaned : 'attachment.dat';
+}
+
+function sanitizeContentType(contentType?: string): string {
+  const cleaned = (contentType || '').replace(/[\r\n\0]/g, '').trim();
+  return cleaned.length > 0 ? cleaned : 'application/octet-stream';
+}
+
+function toAttachmentBlob(content: Blob | Uint8Array | string, contentType?: string): Blob {
+  const mime = sanitizeContentType(contentType);
+  if (content instanceof Blob) {
+    if (content.size === 0) {
+      throw new WazobiaValidationError('Attachment file content must not be empty.', 400);
+    }
+    return content;
+  }
+  if (typeof content === 'string') {
+    if (content.length === 0) {
+      throw new WazobiaValidationError('Attachment file content must not be empty.', 400);
+    }
+    return new Blob([content], { type: mime });
+  }
+  if (content instanceof Uint8Array) {
+    if (content.byteLength === 0) {
+      throw new WazobiaValidationError('Attachment file content must not be empty.', 400);
+    }
+    return new Blob([content as any], { type: mime });
+  }
+  throw new WazobiaValidationError('Invalid file format provided for attachment upload.', 400);
+}
 
 export class MessagesResource {
   constructor(private readonly http: HttpClient) {}
@@ -39,6 +75,9 @@ export class MessagesResource {
    * ```
    */
   public async send(request: SendMessageRequest, options?: RequestOptions): Promise<SendMessageResponse> {
+    if (request.files && request.files.length > 0) {
+      return this.sendWithAttachments(request, request.files, options);
+    }
     const payload = this.normalizeSendPayload(request);
     return this.http.post<SendMessageResponse>('/sending/messages', payload, options);
   }
@@ -62,17 +101,13 @@ export class MessagesResource {
 
     if (file && typeof file === 'object' && 'content' in file) {
       const fileAttachment = file as FileAttachment;
-      const blob = fileAttachment.content instanceof Blob
-        ? fileAttachment.content
-        : new Blob([fileAttachment.content as any], { type: fileAttachment.contentType || 'application/octet-stream' });
-      formData.append('file', blob, fileAttachment.fileName);
-    } else if (file instanceof Blob) {
-      formData.append('file', file, fileName || 'attachment.dat');
-    } else if (typeof file === 'string' || file instanceof Uint8Array) {
-      const blob = new Blob([file as any], { type: 'application/octet-stream' });
-      formData.append('file', blob, fileName || 'attachment.dat');
+      const blob = toAttachmentBlob(fileAttachment.content, fileAttachment.contentType);
+      formData.append('file', blob, sanitizeFileName(fileAttachment.fileName));
+    } else if (file instanceof Blob || typeof file === 'string' || file instanceof Uint8Array) {
+      const blob = toAttachmentBlob(file);
+      formData.append('file', blob, sanitizeFileName(fileName));
     } else {
-      throw new Error('Invalid file format provided for attachment upload.');
+      throw new WazobiaValidationError('Invalid file format provided for attachment upload.', 400);
     }
 
     return this.http.postMultipart<AttachmentUploadResponse>('/sending/attachments/upload', formData, options);
@@ -86,16 +121,17 @@ export class MessagesResource {
     attachments: FileAttachment[],
     options?: RequestOptions
   ): Promise<SendMessageResponse> {
+    if (!attachments || attachments.length === 0) {
+      throw new WazobiaValidationError('At least one file attachment is required.', 400);
+    }
     const payload = this.normalizeSendPayload(request);
     const formData = new FormData();
 
     formData.append('message', JSON.stringify(payload));
 
     for (const attachment of attachments) {
-      const blob = attachment.content instanceof Blob
-        ? attachment.content
-        : new Blob([attachment.content as any], { type: attachment.contentType || 'application/octet-stream' });
-      formData.append('files', blob, attachment.fileName);
+      const blob = toAttachmentBlob(attachment.content, attachment.contentType);
+      formData.append('files', blob, sanitizeFileName(attachment.fileName));
     }
 
     return this.http.postMultipart<SendMessageResponse>('/sending/messages/with-attachments', formData, options);

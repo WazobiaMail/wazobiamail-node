@@ -7,11 +7,11 @@
  * ---------------------------------------------------------------
  */
 
-import { WazobiaAuthenticationError } from './errors.js';
+import { WazobiaAuthenticationError, WazobiaValidationError } from './errors.js';
 
 export const DEFAULT_BASE_URL = 'https://app.wazobiamail.com/api/v1';
 export const DEFAULT_TIMEOUT_MS = 30_000;
-export const SDK_VERSION = '0.1.0';
+export const SDK_VERSION = '0.1.1';
 export const DEFAULT_USER_AGENT = `wazobiamail-node/${SDK_VERSION}`;
 
 export type FetchFunction = typeof globalThis.fetch;
@@ -113,9 +113,21 @@ export function resolveConfig(options?: string | WazobiaClientOptions): Resolved
   }
 
   const apiKey = rawApiKey.trim();
+  if (/[\r\n\0]/.test(apiKey)) {
+    throw new WazobiaValidationError('WazobiaMail API key contains illegal control characters.', 400);
+  }
+
+  for (const [headerName, headerVal] of Object.entries(customHeaders)) {
+    if (/[\r\n\0:]/.test(headerName) || /[\r\n\0]/.test(String(headerVal))) {
+      throw new WazobiaValidationError(`Custom header "${headerName}" contains illegal control characters.`, 400);
+    }
+  }
 
   // Resolve base URL
-  let baseUrl = customBaseUrl || getEnv('WAZOBIA_BASE_URL') || DEFAULT_BASE_URL;
+  let baseUrl = (customBaseUrl || getEnv('WAZOBIA_BASE_URL') || DEFAULT_BASE_URL).trim();
+  if (/[\r\n\0]/.test(baseUrl) || (!baseUrl.startsWith('https://') && !baseUrl.startsWith('http://'))) {
+    throw new WazobiaValidationError('baseUrl must use http:// or https:// without control characters.', 400);
+  }
   baseUrl = baseUrl.replace(/\/+$/, ''); // Strip trailing slashes
 
   // Resolve fetch

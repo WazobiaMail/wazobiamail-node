@@ -165,6 +165,13 @@ export class HttpClient {
   }
 
   private buildHeaders(options?: RequestOptions, hasJsonBody = false): Record<string, string> {
+    const assertSafeHeaderValue = (name: string, value: string): string => {
+      if (/[\r\n\0]/.test(value)) {
+        throw new WazobiaValidationError(`Header "${name}" contains illegal control characters.`, 400);
+      }
+      return value;
+    };
+
     const headers: Record<string, string> = {
       'User-Agent': DEFAULT_USER_AGENT,
       'Accept': 'application/json',
@@ -172,14 +179,21 @@ export class HttpClient {
       ...options?.headers,
     };
 
+    for (const [key, val] of Object.entries(headers)) {
+      if (/[\r\n\0:]/.test(key)) {
+        throw new WazobiaValidationError(`Header name "${key}" contains illegal characters.`, 400);
+      }
+      assertSafeHeaderValue(key, String(val));
+    }
+
     // Standard WazobiaMail authentication header
     if (this.config.authScheme === 'header' || this.config.authScheme === 'both') {
-      headers['X-API-Key'] = this.config.apiKey;
+      headers['X-API-Key'] = assertSafeHeaderValue('X-API-Key', this.config.apiKey);
     }
 
     // Bearer token support
     if (this.config.authScheme === 'bearer' || this.config.authScheme === 'both') {
-      headers['Authorization'] = `Bearer ${this.config.apiKey}`;
+      headers['Authorization'] = `Bearer ${assertSafeHeaderValue('Authorization', this.config.apiKey)}`;
     }
 
     if (hasJsonBody) {
@@ -187,7 +201,7 @@ export class HttpClient {
     }
 
     if (options?.idempotencyKey) {
-      headers['Idempotency-Key'] = options.idempotencyKey;
+      headers['Idempotency-Key'] = assertSafeHeaderValue('Idempotency-Key', options.idempotencyKey);
     }
 
     return headers;
